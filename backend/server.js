@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const prisma = require('./src/db/prisma');
+const agentCreationRouter = require('./routes/agentCreation');
 const agentsRouter = require('./routes/agents');
 const swapRouter = require('./routes/swap');
 
@@ -28,6 +29,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/agents', agentsRouter);
+app.use('/api/agent', agentCreationRouter);
 app.use('/swap', swapRouter);
 
 /**

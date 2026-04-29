@@ -5,6 +5,9 @@ import { AgentService } from '@/services/agentService';
 export default function AgentsPage() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [createdAgentId, setCreatedAgentId] = useState('');
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -14,6 +17,21 @@ export default function AgentsPage() {
     };
     fetchAgents();
   }, []);
+
+  const handleCreateAgent = async () => {
+    try {
+      setCreating(true);
+      setCreateError('');
+      setCreatedAgentId('');
+
+      const result = await AgentService.createAgent();
+      setCreatedAgentId(result.agentId);
+    } catch (error) {
+      setCreateError(error.message || 'Failed to create agent');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <main className="premium-container animate-fade">
@@ -43,7 +61,15 @@ export default function AgentsPage() {
       </div>
 
       <div style={{ marginTop: '4rem', textAlign: 'center' }}>
-        <button className="btn-primary" style={{ padding: '1rem 2rem' }}>Deploy New Agent</button>
+        <button className="btn-primary" style={{ padding: '1rem 2rem' }} onClick={handleCreateAgent} disabled={creating}>
+          {creating ? 'Creating...' : 'Create Agent'}
+        </button>
+        {createdAgentId ? (
+          <p style={{ marginTop: '1rem' }}>Created agent ID: {createdAgentId}</p>
+        ) : null}
+        {createError ? (
+          <p style={{ marginTop: '1rem', color: 'crimson' }}>{createError}</p>
+        ) : null}
       </div>
     </main>
   );

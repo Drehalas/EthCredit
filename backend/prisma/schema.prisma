@@ -11,13 +11,19 @@ datasource db {
 }
 
 model Agent {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  status    String   @default("active")
-  metadata  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  did               String   @unique @map("did")
+  agentId           String   @unique @map("agent_id")
+  walletAddress     String   @unique @map("wallet_address")
+  name              String   @unique
+  status            String   @default("active")
+  reputationScore   Float    @default(0) @map("reputation_score")
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([walletAddress])
+  @@index([did])
   @@map("agents")
 }

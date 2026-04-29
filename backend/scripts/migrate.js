@@ -35,7 +35,12 @@ async function runMigrations() {
         await pool.query(sql);
         console.log(`✓ Executed: ${file}`);
       } catch (err) {
-        if (err.message.includes('already exists') || err.message.includes('duplicate key')) {
+        const errorMsg = err.message.toLowerCase();
+        if (
+          errorMsg.includes('already exists') || 
+          errorMsg.includes('duplicate key') ||
+          errorMsg.includes('relation') && errorMsg.includes('already exists')
+        ) {
           console.log(`⊘ Skipped (already applied): ${file}`);
         } else {
           console.error(`✗ Failed: ${file}`);
@@ -44,7 +49,7 @@ async function runMigrations() {
       }
     }
 
-    console.log('Migrations completed successfully.');
+    console.log('✓ Migrations completed successfully.');
   } catch (err) {
     console.error('Migration failed:', err.message);
     process.exit(1);

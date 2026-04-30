@@ -9,8 +9,11 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/ethcredit';
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: dbUrl,
+  // Ensure password is explicitly a string
+  password: process.env.DB_PASSWORD || 'password',
 });
 
 const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');

@@ -3,6 +3,24 @@ const { createAgentRecord, getAgentByDid } = require('../src/services/agentCreat
 
 const router = express.Router();
 
+function getSwapStrategy() {
+  const tokenIn = process.env.SEPOLIA_USDC_ADDRESS || process.env.SWAP_TOKEN_IN_ADDRESS;
+  const tokenOut = process.env.SEPOLIA_WETH_ADDRESS || process.env.SWAP_TOKEN_OUT_ADDRESS;
+
+  if (!tokenIn || !tokenOut) {
+    const error = new Error('Sepolia swap token addresses are not configured');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return {
+    action: 'swap',
+    tokenIn,
+    tokenOut,
+    amount: '10',
+  };
+}
+
 router.post('/create', async (req, res) => {
   try {
     const { walletAddress, message, signature } = req.body || {};
@@ -45,6 +63,17 @@ router.get('/by-did/:did', async (req, res) => {
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || 'Failed to retrieve agent',
+    });
+  }
+});
+
+router.get('/action', async (req, res) => {
+  try {
+    return res.json(getSwapStrategy());
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || 'Failed to get agent action',
     });
   }
 });

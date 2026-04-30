@@ -11,19 +11,42 @@ datasource db {
 }
 
 model Agent {
-  id                String   @id @default(cuid())
-  did               String   @unique @map("did")
-  agentId           String   @unique @map("agent_id")
-  walletAddress     String   @unique @map("wallet_address")
-  name              String   @unique
-  status            String   @default("active")
-  reputationScore   Float    @default(0) @map("reputation_score")
-  metadata          Json     @default("{}")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                String             @id @default(cuid())
+  did               String             @unique @map("did")
+  agentId           String             @unique @map("agent_id")
+  walletAddress     String             @unique @map("wallet_address")
+  name              String             @unique
+  status            String             @default("active")
+  reputationScore   Float              @default(0) @map("reputation_score")
+  metadata          Json               @default("{}")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  swapTransactions  SwapTransaction[]
 
   @@index([status])
   @@index([walletAddress])
   @@index([did])
   @@map("agents")
+}
+
+model SwapTransaction {
+  id            String   @id @default(cuid())
+  agentId       String   @map("agent_id")
+  agent         Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  walletAddress String   @map("wallet_address")
+  tokenIn       String   @map("token_in")
+  tokenOut      String   @map("token_out")
+  amount        String
+  txHash        String?  @map("tx_hash")
+  status        String   @default("pending")
+  source        String   @default("manual")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([agentId])
+  @@index([walletAddress])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("swap_transactions")
 }

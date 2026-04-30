@@ -28,6 +28,38 @@ app.get('/health', async (req, res) => {
   }
 });
 
+/**
+ * GET /routes
+ * Debugging endpoint: list registered routes and methods
+ */
+app.get('/routes', (req, res) => {
+  try {
+    const routes = [];
+    if (app._router && app._router.stack) {
+      app._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+          // routes registered directly on the app
+          const methods = Object.keys(middleware.route.methods).map((m) => m.toUpperCase());
+          routes.push({ path: middleware.route.path, methods });
+        } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
+          // router middleware
+          middleware.handle.stack.forEach((handler) => {
+            if (handler.route) {
+              const methods = Object.keys(handler.route.methods).map((m) => m.toUpperCase());
+              routes.push({ path: handler.route.path, methods });
+            }
+          });
+        }
+      });
+    }
+
+    res.json({ success: true, routes });
+  } catch (err) {
+    console.error('Failed to enumerate routes:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.use('/agents', agentsRouter);
 app.use('/api/agent', agentCreationRouter);
 app.use('/swap', swapRouter);

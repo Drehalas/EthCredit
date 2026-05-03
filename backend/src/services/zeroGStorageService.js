@@ -42,25 +42,60 @@ async function upload(payload) {
     const tempFileName = `/tmp/0g-upload-${crypto.randomBytes(8).toString('hex')}.json`;
     fs.writeFileSync(tempFileName, JSON.stringify(payload));
     
+    const MAX_RETRIES = 3;
+    let attempt = 1;
+    let file;
+
     try {
-        const file = await ZgFile.fromFilePath(tempFileName);
+        file = await ZgFile.fromFilePath(tempFileName);
         const indexer = getIndexer();
         
-        // Upload
-        const [result, err] = await indexer.upload(file, storageRpc, signer);
-        if (err) throw err;
+        while (attempt <= MAX_RETRIES) {
+            try {
+                if (attempt === 1) {
+                    console.log(`[0G STORAGE] Upload started for temp file ${tempFileName}`);
+                } else {
+                    console.log(`[0G STORAGE] Upload retry attempt ${attempt}/${MAX_RETRIES}`);
+                }
 
-        let txHash, rootHash;
-        if (result.txHashes) {
-            txHash = result.txHashes[0];
-            rootHash = result.rootHashes[0];
-        } else {
-            txHash = result.txHash;
-            rootHash = result.rootHash;
+                const [result, err] = await indexer.upload(file, storageRpc, signer);
+                if (err) throw err;
+
+                let txHash, rootHash;
+                if (result.txHashes) {
+                    txHash = result.txHashes[0];
+                    rootHash = result.rootHashes[0];
+                } else {
+                    txHash = result.txHash;
+                    rootHash = result.rootHash;
+                }
+
+                console.log(`[0G STORAGE] Upload success: rootHash=${rootHash}`);
+                return { txHash, rootHash };
+            } catch (error) {
+                console.error(`[0G STORAGE] Retry ${attempt} failed:`, error.message);
+                if (attempt === MAX_RETRIES) {
+                    console.error('[0G STORAGE] Final failure after retries.');
+                    throw error;
+                }
+                
+                // Exponential backoff: 1s, 2s
+                const delay = 1000 * Math.pow(2, attempt - 1);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                attempt++;
+            }
+        }
+    } finally {
+        // Attempt to close the file handle explicitly if the SDK provides a close method
+        // to prevent the Node file descriptor GC warnings.
+        if (file && typeof file.close === 'function') {
+            try {
+                file.close();
+            } catch (e) {
+                // Ignore errors closing the file
+            }
         }
 
-        return { txHash, rootHash };
-    } finally {
         // Cleanup temp file
         if (fs.existsSync(tempFileName)) {
             fs.unlinkSync(tempFileName);

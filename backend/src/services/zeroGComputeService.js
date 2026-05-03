@@ -97,6 +97,9 @@ Please provide your trading decision.
 `;
 
     try {
+        console.log('\n[0G-COMPUTE] Sending prompt to Router API...');
+        console.log(`[0G-COMPUTE] User Prompt:\n${userPrompt.trim()}\n`);
+
         const response = await client.chat.completions.create({
             model: process.env.ZERO_G_MODEL,
             messages: [
@@ -110,6 +113,8 @@ Please provide your trading decision.
             throw new Error('No content returned from 0G model');
         }
 
+        console.log(`[0G-COMPUTE] Raw AI Response:\n${content}\n`);
+
         // Clean up markdown if the model hallucinates it despite instructions
         const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
         
@@ -121,6 +126,8 @@ Please provide your trading decision.
         }
 
         validateDecisionShape(decision);
+        
+        console.log('[0G-COMPUTE] Parsed Decision Object:', decision);
         return decision;
     } catch (err) {
         console.error('[0G-COMPUTE] Error calling model or parsing JSON, falling back to stub:', err.message);

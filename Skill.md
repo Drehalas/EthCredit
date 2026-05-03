@@ -37,3 +37,6 @@ Core agent activities powered by the Zero Gravity infrastructure.
 - **Storage**: Archival of agent logs and crawler data.
 - **Inference**: GPU-based AI inference nodes for complex decision making.
 - **Economy**: Settlement via USDC on the EthCredit economy layer.
+
+
+

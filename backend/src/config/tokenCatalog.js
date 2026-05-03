@@ -61,7 +61,7 @@ function getTokenCatalog() {
   return {
     chain: process.env.BASE_SEPOLIA_CHAIN_NAME || 'Base Sepolia',
     chainId: Number(process.env.BASE_SEPOLIA_CHAIN_ID || 84532),
-    rpcUrl: process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
+    rpcUrl: process.env.RPC_URL || 'https://sepolia.base.org',
     tokens: parseTokensFromEnv(),
   };
 }

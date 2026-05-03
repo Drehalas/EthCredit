@@ -196,41 +196,17 @@ async function runAgent(agentId, opts = {}) {
         throw makeError(`Swap execution failed: ${err.message}`, err.statusCode || 500);
     }
 
-    // ── Phase 7: 0G Storage ──────────────────────────────────────────────────────
-    let storageHash;
-    try {
-        const payload = {
-            type: "SWAP",
-            agentId,
-            escrowId,
-            decision,
-            txHash: txHash || null,
-            timestamp: new Date().toISOString()
-        };
-
-        const logResult = await zeroGStorage.upload(payload);
-        storageHash = logResult.rootHash;
-
-        // Save into DB
-        await prisma.transactionLog.create({
-            data: {
-                agentId: internalAgentId, // using internal Prisma ID
-                type: 'SWAP',
-                txHash: logResult.txHash || '',
-                rootHash: logResult.rootHash || '',
-                payload
-            }
-        });
-
-        // Persist storageHash on the escrow record (best-effort)
-        await prisma.escrow.update({
-            where: { id: escrowId },
-            data: { storageHash },
-        });
-    } catch (err) {
-        // Non-fatal: swap already on-chain, log warning and continue to release
-        console.error('[agentRunner] 0G Storage logging failed (non-fatal):', err.message);
-    }
+    // ── Phase 7: 0G Storage (Non-blocking async) ───────────────────────────────
+    // Fire-and-forget: we do not await this function.
+    handleStorageUpload({
+        agentId,
+        internalAgentId,
+        escrowId,
+        decision,
+        txHash
+    }).catch(err => {
+        console.error('[agentRunner] Uncaught error in background storage queue:', err.message);
+    });
 
     // ── Phase 8: Release escrow ───────────────────────────────────────────────
     try {
@@ -252,7 +228,7 @@ async function runAgent(agentId, opts = {}) {
         amount,
         token,
         txHash,
-        storageHash: storageHash || null,
+        storageHash: 'PENDING',
         status: 'SUCCESS',
         decision,
         balances: liveBalances,
@@ -364,6 +340,69 @@ function buildTiming(startedAt, completedAt = new Date()) {
         completedAt: completedAt.toISOString(),
         durationMs: completedAt - startedAt,
     };
+}
+
+/**
+ * Background queue to upload 0G Storage and fallback to DB.
+ */
+async function handleStorageUpload({ agentId, internalAgentId, escrowId, decision, txHash }) {
+    // Strip unnecessary fields from decision to reduce bytes
+    const optimizedDecision = {
+        action: decision.action,
+        tokenIn: decision.tokenIn,
+        tokenOut: decision.tokenOut,
+        amount: decision.amount
+    };
+
+    const payload = {
+        type: "SWAP",
+        agentId,
+        escrowId,
+        decision: optimizedDecision,
+        txHash: txHash || null,
+        timestamp: new Date().toISOString()
+    };
+
+    let storageHash = null;
+
+    try {
+        const logResult = await zeroGStorage.upload(payload);
+        storageHash = logResult.rootHash;
+
+        await prisma.transactionLog.create({
+            data: {
+                agentId: internalAgentId,
+                type: 'SWAP',
+                txHash: logResult.txHash || '',
+                rootHash: storageHash || '',
+                payload
+            }
+        });
+    } catch (err) {
+        // Fallback DB save if 0G Storage fails completely
+        console.error('[agentRunner] 0G Storage logging failed all retries. Saving fallback to DB.');
+        await prisma.transactionLog.create({
+            data: {
+                agentId: internalAgentId,
+                type: 'SWAP',
+                txHash: txHash || '',
+                rootHash: '', // Keep empty to signify FAILED storage status
+                payload: { ...payload, storageStatus: 'FAILED' }
+            }
+        });
+    }
+
+    if (storageHash) {
+        // Persist storageHash on the escrow record (best-effort)
+        try {
+            await prisma.escrow.update({
+                where: { id: escrowId },
+                data: { storageHash },
+            });
+        } catch (updateErr) {
+            console.error('[agentRunner] Failed to update escrow with storageHash:', updateErr.message);
+        }
+    }
 }
 
 module.exports = {

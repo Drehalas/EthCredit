@@ -40,8 +40,6 @@ router.post('/run', async (req, res) => {
     }
 });
 
-});
-
 /**
  * GET /transactions/:agentId
  *
@@ -50,9 +48,22 @@ router.post('/run', async (req, res) => {
 router.get('/transactions/:agentId', async (req, res) => {
     try {
         const { agentId } = req.params;
+
+        // Resolve public agentId to internal Prisma ID
+        const agentVaultService = require('../src/services/agentVaultService');
+        const vaultData = await agentVaultService.getAgentVaultByAgentIdentifier(agentId);
+        
+        if (!vaultData || !vaultData.agent) {
+            return res.status(404).json({ success: false, error: 'Agent not found' });
+        }
+
+        const internalId = vaultData.agent.id;
+
         const logs = await prisma.transactionLog.findMany({
-            where: { agentId }
+            where: { agentId: internalId },
+            orderBy: { createdAt: 'desc' }
         });
+
         res.status(200).json({ success: true, logs });
     } catch (err) {
         console.error('[GET /transactions/:agentId] Error:', err.message);

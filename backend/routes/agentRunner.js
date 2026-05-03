@@ -3,6 +3,7 @@ const router = express.Router();
 const agentRunnerService = require('../src/services/agentRunnerService');
 const zeroGStorage = require('../src/services/zeroGStorageService');
 const prisma = require('../src/db/prisma');
+const VaultService = require('../src/services/vaultService');
 
 /**
  * POST /agent/run
@@ -85,6 +86,44 @@ router.get('/transactions/data/:rootHash', async (req, res) => {
         console.error('[GET /transactions/data/:rootHash] Error:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+router.get('/:agentId/vault', async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const vault = await prisma.vault.findUnique({
+      where: { agentId },
+      include: { agent: true }
+    });
+
+    if (!vault) {
+      return res.status(404).json({ error: 'Vault not found' });
+    }
+
+    // Perform live balance sync before returning
+    let liveBalance = { ETH: 0, USDC: 0 };
+    try {
+      liveBalance = await VaultService.getVaultBalance(vault.walletAddress);
+      
+      // Update database with fresh balance
+      await prisma.vault.update({
+        where: { agentId },
+        data: { balance: liveBalance }
+      });
+    } catch (err) {
+      console.warn(`[vault] Failed to sync live balance for ${agentId}:`, err.message);
+      liveBalance = vault.balance; // Fallback to DB balance if RPC fails
+    }
+
+    res.json({
+      agentName: vault.agent?.name,
+      walletAddress: vault.walletAddress,
+      balance: liveBalance,
+      lockedBalance: vault.lockedBalance
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

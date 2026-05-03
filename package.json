@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix frontend run dev",
-    "postinstall": "npm install --prefix frontend && npm install --prefix backend",
+    "postinstall": "npm install --prefix frontend && npm install --prefix backend && npm --prefix backend run prisma:generate",
     "build": "npm --prefix frontend run build",
     "start": "npm --prefix frontend run start",
     "lint": "npm --prefix frontend run lint",

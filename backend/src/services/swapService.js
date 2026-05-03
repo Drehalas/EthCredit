@@ -12,33 +12,50 @@ async function logSwapTransaction(swapData) {
   }
 
   try {
+    // Ensure the agent exists (especially for 'user' or 'default' manual swaps)
+    // We use agentId as the lookup but we must ensure we can link via 'id'
+    const targetId = agentId || 'user';
+    
+    await prisma.agent.upsert({
+      where: { agentId: targetId },
+      update: {},
+      create: {
+        id: targetId, // Force the ID to match so the relation works
+        agentId: targetId,
+        name: targetId === 'user' ? 'Manual User' : targetId,
+        did: `did:ethcredit:${targetId}-${Date.now()}`,
+        status: 'active',
+        walletAddress: `0x_manual_${targetId}_${Date.now()}` // Needs to be unique
+      }
+    });
+
     const transaction = await prisma.swapTransaction.create({
       data: {
-        agentId: agentId || 'default',
+        agentId: targetId,
         walletAddress,
         tokenIn,
         tokenOut,
         amount: amount.toString(),
         txHash: txHash || null,
-        status,
+        status: status.toUpperCase(),
         source: agentId ? 'agent' : 'manual',
       },
     });
 
     // Increment agent reputation score if swap was successful
-    if (agentId && agentId !== 'default' && status === 'SUCCESS') {
+    if (status.toUpperCase() === 'SUCCESS' || status.toUpperCase() === 'COMPLETED') {
       try {
         await prisma.agent.update({
-          where: { id: agentId },
+          where: { agentId: targetId },
           data: {
             reputationScore: {
               increment: 10
             }
           }
         });
-        console.log(`[swapService] Incremented reputation score for agent ${agentId} (+10)`);
+        console.log(`[swapService] Incremented reputation score for agent ${targetId} (+10)`);
       } catch (err) {
-        console.warn(`[swapService] Failed to increment reputation score for agent ${agentId}:`, err.message);
+        console.warn(`[swapService] Failed to increment reputation score for agent ${targetId}:`, err.message);
       }
     }
 

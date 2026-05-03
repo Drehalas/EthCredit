@@ -6,7 +6,7 @@ const VaultService = {
    */
   async listVaults() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/vaults/list`, {
+      const response = await fetch('/api/vaults/list', {
         headers: {
           'Accept': 'application/json',
         },

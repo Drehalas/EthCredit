@@ -83,7 +83,7 @@ async function ensureBaseSepoliaNetwork(provider) {
 }
 
 async function fetchAgentAction() {
-  const response = await fetch(`${API_BASE_URL}/api/agent/action`, {
+  const response = await fetch('/api/agent/action', {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -227,7 +227,7 @@ export async function runAgentSwap() {
  */
 async function getQuote({ tokenIn, tokenOut, amount }) {
   try {
-    const response = await fetch(`${API_BASE_URL}/swap/quote`, {
+    const response = await fetch('/swap/quote', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ async function getQuote({ tokenIn, tokenOut, amount }) {
  */
 async function logSwapTransaction({ walletAddress, agentId, tokenIn, tokenOut, amount, txHash, status = 'success' }) {
   try {
-    const response = await fetch(`${API_BASE_URL}/swap/log`, {
+    const response = await fetch('/swap/log', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -195,7 +195,7 @@ export default function SwapPage() {
       setCatalogError(null);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/swap/tokens`, {
+        const response = await fetch('/swap/tokens', {
           headers: {
             Accept: 'application/json',
           },

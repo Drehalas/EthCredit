@@ -23,7 +23,7 @@ export const AgentService = {
     const message = 'Create EthCredit Agent';
     const signature = await signer.signMessage(message);
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/agent/create`, {
+    const response = await fetch('/api/agent/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ export const AgentService = {
    */
   async findAgents() {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/agents/list`, {
+      const response = await fetch('/agents/list', {
         headers: {
           'Accept': 'application/json',
         },
@@ -76,7 +76,7 @@ export const AgentService = {
    */
   async getAgentTransactions(agentId) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/agent/transactions/${agentId}`);
+      const response = await fetch(`/agent/transactions/${agentId}`);
       const data = await response.json();
 
       if (!response.ok) {
